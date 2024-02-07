@@ -28,7 +28,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = 
 
 # Set file path
 # file_path = 'SDG.pdf'
