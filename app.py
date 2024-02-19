@@ -8,7 +8,7 @@ from langchain.chains import QAGenerationChain
 from langchain.text_splitter import TokenTextSplitter
 from langchain_community.docstore.document import Document
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate, ChatPromptTemplate
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores.faiss import FAISS
 from langchain.chains.summarize import load_summarize_chain
@@ -21,6 +21,8 @@ import uvicorn
 import aiofiles
 from PyPDF2 import PdfReader
 import csv
+import ocrmypdf
+from api_keys import Constants
 
 app = FastAPI()
 
@@ -28,18 +30,13 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-os.environ["OPENAI_API_KEY"] = "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"
+OPENAI_API_KEY = str(Constants.OPENAI_API())
 
-# Set file path
-# file_path = 'SDG.pdf'
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
-def count_pdf_pages(pdf_path):
-    try:
-        pdf = PdfReader(pdf_path)
-        return len(pdf.pages)
-    except Exception as e:
-        print("Error:", e)
-        return None
+def ocr_pdf(file_path, save_path):
+    ocrmypdf.ocr(file_path, save_path, skip_text=True)
+    return save_path
 
 def file_processing(file_path):
 
@@ -165,6 +162,40 @@ def get_csv (file_path):
             csv_writer.writerow([question, answer])
     return output_file
 
+def write_gen():
+    output_file = 'static/output/QA.csv'
+    with open(output_file, "r") as f:
+        csv_reader = csv.DictReader(f)
+        question_bank = []
+        for row in csv_reader:
+            question_bank.append(row)
+    for question in question_bank:
+        print(question)
+
+def answer_check(question, input_text, answer_text):
+    model = ChatOpenAI(model='gpt-3.5-turbo', temperature=0.3)
+    template = """
+    You are an expert at grading student answers. A student was given this question: "{question}"
+    Your goal is to grade this student's answer (correct or incorrect) by comparing it to the actual answer.
+    
+    Here is the student's answer: "{input_text}"
+
+    Here is the correct answer: "{answer_text}"
+
+    Please response as if you are talking directly to the student (use I - you). Keep your response short by only grading the answer and pointing out the main differences. Do not give out compliments, keep it strictly analytical.
+    The answer and students answer may not have the same examples. That's okay. Do NOT say that they don't have the same examples as the ones in the actual answer. Try your best to see if the student's examples are related to the theory and concept of the actual answer.
+    Make sure not to lose any important information.
+    """
+
+    PROMPT = ChatPromptTemplate.from_template(template)
+
+    chain = PROMPT | model
+
+    result = chain.invoke({"question": question,
+                  "input_text": input_text,
+                  "answer_text": answer_text})
+    return result.content
+
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -176,12 +207,20 @@ async def chat(request: Request, pdf_file: bytes = File(), filename: str = Form(
         os.mkdir(base_folder)
     pdf_filename = os.path.join(base_folder, filename)
 
+    work_folder = 'static/temp'
+
+    temp_pdf = "temp.pdf"
+
+    if not os.path.isdir(work_folder):
+        os.mkdir(work_folder)
+    temp_filename = os.path.join(work_folder, temp_pdf)
+
+    ocr_pdf(pdf_filename, temp_filename)
+
     async with aiofiles.open(pdf_filename, 'wb') as f:
         await f.write(pdf_file)
-    # page_count = count_pdf_pages(pdf_filename)
-    # if page_count > 5:
-    #     return Response(jsonable_encoder(json.dumps({"msg": 'error'})))
-    response_data = jsonable_encoder(json.dumps({"msg": 'success',"pdf_filename": pdf_filename}))
+
+    response_data = jsonable_encoder(json.dumps({"msg": 'success',"pdf_filename": temp_filename}))
     res = Response(response_data)
     return res
 
