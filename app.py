@@ -22,7 +22,7 @@ import aiofiles
 from PyPDF2 import PdfReader
 import csv
 import ocrmypdf
-from api_keys import Constants
+from api_keys.Constants import OPENAI_API
 
 app = FastAPI()
 
@@ -30,7 +30,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-OPENAI_API_KEY = str(Constants.OPENAI_API())
+OPENAI_API_KEY = str(OPENAI_API)
 
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
