@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Question Quiz</title>
+</head>
+<body>
+    <h1>Question Quiz</h1>
+    <form method="POST">
+        <p>{{ question }}</p>
+        {% if result %}
+            <p>{{ result }}</p>
+        {% endif %}
+        {% if answer %}
+            <p>Full Answer: {{ answer }}</p>
+        {% endif %}
+        {% if not next_question %}
+            {% if question %}
+                <input type="text" name="answer">
+                <input type="submit" formaction="/check_answer" value="Check Answer">
+            {% else %}
+                <p>{{ answer }}</p>
+            {% endif %}
+        {% else %}
+            <input type="submit" formaction="/next_question" value="Next Question">
+        {% endif %}
+    </form>
+</body>
+</html>

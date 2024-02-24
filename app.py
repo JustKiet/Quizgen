@@ -14,6 +14,7 @@ from langchain_community.vectorstores.faiss import FAISS
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chains import RetrievalQA
 
+import pandas as pd
 import os 
 import json
 import time
@@ -22,7 +23,6 @@ import aiofiles
 from PyPDF2 import PdfReader
 import csv
 import ocrmypdf
-from api_keys.Constants import OPENAI_API
 
 app = FastAPI()
 
@@ -30,9 +30,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-OPENAI_API_KEY = str(OPENAI_API)
-
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+os.environ["OPENAI_API_KEY"] = "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"
 
 def ocr_pdf(file_path, save_path):
     ocrmypdf.ocr(file_path, save_path, skip_text=True)
@@ -147,7 +145,7 @@ def get_csv (file_path):
     base_folder = 'static/output/'
     if not os.path.isdir(base_folder):
         os.mkdir(base_folder)
-    output_file = base_folder+"QA.csv"
+    output_file = base_folder+"QA.csv"    
     with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
         csv_writer = csv.writer(csvfile)
         csv_writer.writerow(["Question", "Answer"])  # Writing the header row
@@ -224,13 +222,60 @@ async def chat(request: Request, pdf_file: bytes = File(), filename: str = Form(
     res = Response(response_data)
     return res
 
+question_index = 0
+question_bank = None
+
 @app.post("/analyze")
 async def chat(request: Request, pdf_filename: str = Form(...)):
+    global question_bank
     output_file = get_csv(pdf_filename)
+    question_bank = pd.read_csv(output_file)
     response_data = jsonable_encoder(json.dumps({"output_file": output_file}))
     res = Response(response_data)
     return res
 
+@app.post("/quiz")
+def quiz(request: Request):
+    global question_index
+
+    question = question_bank['Question'][question_index]
+    result = ''
+    answer = ''
+    next_question = False
+
+    return templates.TemplateResponse("quiz.html", {"request": request, "question": question, "answer": answer, "result": result, "next_question": next_question})
+
+@app.post("/check_answer")
+async def check_answer(request: Request):
+    global question_index
+
+    form_data = await request.form()
+    user_answer = form_data['answer']
+    correct_answer = question_bank['Answer'][question_index]
+    question = question_bank['Question'][question_index]
+    next_question = True
+
+    result = answer_check(question, user_answer, correct_answer)
+
+    return templates.TemplateResponse("quiz.html", {"request": request, "question": question, "answer": correct_answer, "result": result, "next_question": next_question})
+
+@app.post("/next_question")
+async def next_question(request: Request):
+    global question_index
+
+    # Move to the next question
+    question_index += 1
+
+    # Check if we have reached the end of the question bank
+    if question_index >= len(question_bank):
+        question = 'End of Question'
+        answer = ''
+        next_question = False
+    else: 
+        question = question_bank['Question'][question_index]
+        answer = ''
+        next_question = False
+    return templates.TemplateResponse("quiz.html", {"request": request, "question": question, "answer": answer, "result": '', "next_question": next_question})
 if __name__ == "__main__":
     uvicorn.run("app:app", port=8000, reload=True)
     
