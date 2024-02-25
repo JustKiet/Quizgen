@@ -1,5 +1,5 @@
 # QUIZGEN
-_QUIZ GEN is a Question Answer Generation App from documents. Primarily suited to Teachers and related Academia's posts._
+_QUIZGEN is a Question Answer Generation App from documents._
 
 ## UPDATE_LOG:
 
