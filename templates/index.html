@@ -41,7 +41,7 @@
                             </div>
                           </div>
                           <div class="mb-3 text-end">
-                            <button type="button" id="upload-btn" class="btn btn-md btn-success">Generate QA Pair</button>
+                            <button type="button" id="upload-btn" class="btn btn-md btn-success">Generate Quiz</button>
                         </div>
                     </div>
                 </div>
@@ -84,9 +84,11 @@
         let download = document.getElementById('download');
         let viewPdf = document.getElementById('view-pdf');
         let downloadBtn = document.getElementById('download-btn');
+        let uploadButton = document.getElementById('upload-btn')
 
         $(document).ready(function () {
             $("#upload-btn").click(async function (event) {
+                $("#upload-btn").html("Generating...")
                 event.preventDefault();
                 const formData = new FormData();
                 const fileInput = document.getElementById('pdf-file') ;  
