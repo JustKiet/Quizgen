@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
-    
+    <title>Quizgen</title>
+    <link rel="stylesheet" href="../static/styles/tailwind.css">
     <style>
         #result, #download {
             display: none;
@@ -17,32 +16,28 @@
         }
     </style>
 </head>
-<body class="bg-dark">
+<body class="bg-neutral-200">
     <section>
-        <div class="container-fluid">
-            <div class="row">
-                <div class="cl-sm-12 text-center p-5 text-white">
+        <div class="container ml-auto mr-auto">
+            <div class="row-auto">
+                <div class="text-3xl text-center p-5 font-bold">
                     <h3>Question Answer Generator</h3>
                 </div>
             </div>
-
         </div>
     </section>
     <section class="mb-4">
-        <div class="container">
-            <div class="row">
-                <div class="cl-sm-12">
-                    <div class="card p-5 shadow border-0 m-3">
-                        <div class="mb-3">
-                            <label for="exampleFormControlInput1" class="form-label">Upload your PDF file here</label>
-                            <div class="input-group mb-3">
-                                <input type="file" class="form-control" id="pdf-file">
-                                <label class="input-group-text" for="pdf-file">Max No. of Pages is 5</label>
-                            </div>
-                          </div>
-                          <div class="mb-3 text-end">
-                            <button type="button" id="upload-btn" class="btn btn-md btn-success">Generate QA Pair</button>
+        <div class="container ml-auto mr-auto">
+            <div class="row-auto">
+                <div class="bg-white p-5 shadow-xl border-0 m-3 rounded-md max-w-7xl ml-auto mr-auto">
+                    <div class="mb-3">
+                        <label for="exampleFormControlInput1" class="m-3 font-medium">Upload your PDF file here <span class="text-red-600 font-medium italic">(*Note: Max No. of Pages is 5)</span></label>
+                        <div class="input-group m-3">
+                            <input type="file" id="pdf-file">
                         </div>
+                      </div>
+                      <div class="mb-1 text-end">
+                        <button type="button" id="upload-btn" class="bg-sky-500 hover:bg-sky-700 py-2 px-3 rounded-md text-gray-200">Generate Quiz</button>
                     </div>
                 </div>
             </div>
@@ -50,7 +45,7 @@
     </section>
     <section id="result">
         <div class="container">
-            <div class="row">
+            <div class="grid grid-cols-2 gap-4">
                 <div class="col-sm-6">
                     <div class="card shadow border-0 p-3 ms-3">
                         <embed id="view-pdf" src="" width="100%" height="600px" />
