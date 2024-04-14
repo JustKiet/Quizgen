@@ -4,7 +4,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.encoders import jsonable_encoder
 from langchain_openai import ChatOpenAI
-from langchain.chains import QAGenerationChain
 from langchain.text_splitter import TokenTextSplitter
 from langchain_community.docstore.document import Document
 from langchain_community.document_loaders import PyPDFLoader
@@ -14,38 +13,37 @@ from langchain_community.vectorstores.faiss import FAISS
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chains import RetrievalQA
 
+import pandas as pd
 import os 
 import json
-import time
 import uvicorn
 import aiofiles
-from PyPDF2 import PdfReader
 import csv
 import ocrmypdf
-from api_keys import Constants
+from api_keys.Constants import OPENAI_API
 
 app = FastAPI()
+
+API_KEY = str(OPENAI_API())
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-OPENAI_API_KEY = str(Constants.OPENAI_API())
+os.environ["OPENAI_API_KEY"] = API_KEY
 
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-
+#Nhận vào đường dẫn đến file pdf gốc và đường dẫn file được xử lý
 def ocr_pdf(file_path, save_path):
     ocrmypdf.ocr(file_path, save_path, skip_text=True)
-    return save_path
+    return save_path #Trả về đường dần file được xử lý
 
 def file_processing(file_path):
-
-    # Load data from PDF
+    #Load file PDF
     loader = PyPDFLoader(file_path)
     data = loader.load()
-
     question_gen = ''
 
+    #Tách văn bản thành các chunks
     for page in data:
         question_gen += page.page_content
         
@@ -65,7 +63,6 @@ def file_processing(file_path):
         chunk_overlap = 100
     )
 
-
     document_answer_gen = splitter_ans_gen.split_documents(
         document_ques_gen
     )
@@ -84,7 +81,7 @@ def llm_pipeline(file_path):
     prompt_template = """
     You are an expert at creating questions based on studying materials and documentation.
     Your goal is to prepare a student for their exam and tests.
-    You do this by creating questions in the form of about the text below:
+    You do this by creating questions about the text below:
 
     ------------
     {text}
@@ -136,9 +133,11 @@ def llm_pipeline(file_path):
     ques_list = ques.split("\n")
     filtered_ques_list = [element for element in ques_list if element.endswith('?') or element.endswith('.')]
 
-    answer_generation_chain = RetrievalQA.from_chain_type(llm=llm_answer_gen, 
-                                                chain_type="stuff", 
-                                                retriever=vector_store.as_retriever())
+    answer_generation_chain = RetrievalQA.from_chain_type(
+                                                            llm=llm_answer_gen, 
+                                                            chain_type="stuff", 
+                                                            retriever=vector_store.as_retriever()
+                                                        )
 
     return answer_generation_chain, filtered_ques_list
 
@@ -147,10 +146,10 @@ def get_csv (file_path):
     base_folder = 'static/output/'
     if not os.path.isdir(base_folder):
         os.mkdir(base_folder)
-    output_file = base_folder+"QA.csv"
+    output_file = base_folder+"QA.csv"    
     with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
         csv_writer = csv.writer(csvfile)
-        csv_writer.writerow(["Question", "Answer"])  # Writing the header row
+        csv_writer.writerow(["Question", "Answer"])
 
         for question in ques_list:
             print("Question: ", question)
@@ -175,15 +174,19 @@ def write_gen():
 def answer_check(question, input_text, answer_text):
     model = ChatOpenAI(model='gpt-3.5-turbo', temperature=0.3)
     template = """
-    You are an expert at grading student answers. A student was given this question: "{question}"
-    Your goal is to grade this student's answer (correct or incorrect) by comparing it to the actual answer.
+    You are an expert at grading student answers. I was given this question: "{question}"
+    Your goal is to grade my answer by comparing it to the actual answer using this grading scale:
+        From 0 - 6: Incorrect. You should give out this grading if the my answer is entirely different to the actual answer; has major mistakes (like containing 1 or more points with opposite/contradictive meaning to the actual answer; missing keywords/key points, etc)
+        From 7 - 10: Correct. You should give out this grading if the my answer satisfied all the keypoints of the questions and the actual answer. The phrasing may be different but the answer should be 80-percent-or-above similar to the actual answer. The actual answer and my answer may not have the same examples. You will IGNORE ALL THE EXAMPLES OF THE ACTUAL ANSWER and only focus on the my examples to see if their examples stick to the main points of the question.
+    Remember not to provide the grading and only say Incorrect or Correct.
     
-    Here is the student's answer: "{input_text}"
+    Here is my answer: "{input_text}"
 
     Here is the correct answer: "{answer_text}"
 
-    Please response as if you are talking directly to the student (use I - you). Keep your response short by only grading the answer and pointing out the main differences. Do not give out compliments, keep it strictly analytical.
-    The answer and students answer may not have the same examples. That's okay. Do NOT say that they don't have the same examples as the ones in the actual answer. Try your best to see if the student's examples are related to the theory and concept of the actual answer.
+    Keep your response short by only grading the answer and pointing out the main differences. Do not give out compliments, keep it strictly analytical.
+    My answer may not be 100 percent similar to the actual answer. I may use synonyms and rephrasal. Make sure to capture the key details of the actual answer and the my answer to provide the most accurate rating.
+    The actual answer and my answer may not have the same examples. You will IGNORE ALL THE EXAMPLES OF THE ACTUAL ANSWER and only focus on the my examples to see if my examples stick to the main points of the question.
     Make sure not to lose any important information.
     """
 
@@ -224,12 +227,58 @@ async def chat(request: Request, pdf_file: bytes = File(), filename: str = Form(
     res = Response(response_data)
     return res
 
+question_index = 0
+question_bank = None
+
 @app.post("/analyze")
 async def chat(request: Request, pdf_filename: str = Form(...)):
+    global question_bank
     output_file = get_csv(pdf_filename)
+    question_bank = pd.read_csv(output_file)
     response_data = jsonable_encoder(json.dumps({"output_file": output_file}))
     res = Response(response_data)
     return res
+
+@app.post("/quiz")
+def quiz(request: Request):
+    global question_index
+
+    question = question_bank['Question'][question_index]
+    result = ''
+    answer = ''
+    next_question = False
+
+    return templates.TemplateResponse("quiz.html", {"request": request, "question": question, "answer": answer, "result": result, "next_question": next_question})
+
+@app.post("/check_answer")
+async def check_answer(request: Request):
+    global question_index
+
+    form_data = await request.form()
+    user_answer = form_data['answer']
+    correct_answer = question_bank['Answer'][question_index]
+    question = question_bank['Question'][question_index]
+    next_question = True
+
+    result = answer_check(question, user_answer, correct_answer)
+
+    return templates.TemplateResponse("quiz.html", {"request": request, "question": question, "user_answer": user_answer, "answer": correct_answer, "result": result, "next_question": next_question})
+
+@app.post("/next_question")
+async def next_question(request: Request):
+    global question_index
+    question_index += 1
+
+    # Check if we have reached the end of the question bank
+    if question_index >= len(question_bank):
+        question = 'End of Question'
+        answer = ''
+        next_question = False
+    else: 
+        question = question_bank['Question'][question_index]
+        answer = ''
+        next_question = False
+    return templates.TemplateResponse("quiz.html", {"request": request, "question": question, "answer": answer, "result": '', "next_question": next_question})
 
 if __name__ == "__main__":
     uvicorn.run("app:app", port=8000, reload=True)

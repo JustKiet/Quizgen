@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quizgen</title>
     <link rel="stylesheet" href="../static/styles/tailwind.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/styles/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         #result, #download {
             display: none;
@@ -14,14 +19,19 @@
         .font-large {
             font-size: 150px;
         }
+
+        .max-w-container {
+            max-width: 90%;
+        }
+
     </style>
 </head>
-<body class="bg-neutral-200">
+<body class="bg-main">
     <section>
         <div class="container ml-auto mr-auto">
             <div class="row-auto">
-                <div class="text-3xl text-center p-5 font-bold">
-                    <h3>Question Answer Generator</h3>
+                <div class="text-5xl text-center p-5">
+                    <span class="roboto-bold title-gradient">Question Answer Generator</span>
                 </div>
             </div>
         </div>
@@ -29,36 +39,35 @@
     <section class="mb-4">
         <div class="container ml-auto mr-auto">
             <div class="row-auto">
-                <div class="bg-white p-5 shadow-xl border-0 m-3 rounded-md max-w-7xl ml-auto mr-auto">
+                <div class="bg-white border-4 border-white p-5 shadow-xl m-3 rounded-md max-w-container ml-auto mr-auto">
                     <div class="mb-3">
-                        <label for="exampleFormControlInput1" class="m-3 font-medium">Upload your PDF file here <span class="text-red-600 font-medium italic">(*Note: Max No. of Pages is 5)</span></label>
+                        <label for="exampleFormControlInput1" class="m-3  text-black roboto-medium">Upload your PDF file here: <span class="text-red-600 font-medium italic">(*Note: Max No. of Pages is 5)</span></label>
                         <div class="input-group m-3">
                             <input type="file" id="pdf-file">
                         </div>
-                      </div>
-                      <div class="mb-1 text-end">
-                        <button type="button" id="upload-btn" class="bg-sky-500 hover:bg-sky-700 py-2 px-3 rounded-md text-gray-200">Generate Quiz</button>
+                    </div>
+                    <div class="mb-1 text-end">
+                        <button type="button" id="upload-btn" class="gen-button py-2 px-3 rounded-md roboto-medium">Generate Quiz</button>
+                        <form id="start-quiz" action="/quiz" method="POST" class="p-2 hidden">
+                            <input type="submit" value="Start Quiz" class="gen-button py-2 px-3 rounded-md roboto-medium cursor-pointer">
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
     </section>
     <section id="result">
-        <div class="container">
+        <div class="container max-w-container ml-auto mr-auto mb-5">
             <div class="grid grid-cols-2 gap-4">
-                <div class="col-sm-6">
-                    <div class="card shadow border-0 p-3 ms-3">
-                        <embed id="view-pdf" src="" width="100%" height="600px" />
-                    </div>
+                <div class="shadow-xl rounded-md p-3">
+                    <embed id="view-pdf" src="" width="100%" height="600px" />
                 </div>
-                <div class="col-sm-6">
-                    <div class="card shadow border-0 p-5 me-3">
-                        <div id="loader" class="text-center">
-                            <i class="fa-solid fa-spinner fa-spin-pulse font-large"></i>
-                        </div>
-                        <div id="download" class="text-center">
-                            <a href="" id="download-btn" class="btn btn-md btn-warning" download><i class="fas fa-download font-large"></i></a>
-                        </div>
+                <div class="shadow-xl rounded-md p-5">
+                    <div id="loader" class="text-center">
+                        <i class="fa-solid fa-spinner fa-spin-pulse font-large"></i>
+                    </div>
+                    <div id="download" class="text-center">
+                        <a href="" id="download-btn" class="btn btn-md btn-warning" download><i class="fas fa-download font-large"></i></a>
                     </div>
                 </div>
             </div>
@@ -76,9 +85,12 @@
         let download = document.getElementById('download');
         let viewPdf = document.getElementById('view-pdf');
         let downloadBtn = document.getElementById('download-btn');
+        let uploadButton = document.getElementById('upload-btn')
+        let startButton = document.getElementById('start-quiz')
 
         $(document).ready(function () {
             $("#upload-btn").click(async function (event) {
+                $("#upload-btn").html("Performing OCR...");
                 event.preventDefault();
                 const formData = new FormData();
                 const fileInput = document.getElementById('pdf-file') ;  
@@ -118,11 +130,7 @@
                             window.location.reload();
                         });
                     }else {
-                        result.style.display = "block";
-                        loader.style.display = "block";
-                        download.style.display = "none";
-                        viewPdf.setAttribute('src', "../"+json.pdf_filename)
-                        viewPdf.setAttribute('preload', 'auto');
+                        $("#upload-btn").html("Generating... This may take a few minutes");
                         const formData = new FormData();
                         formData.append('pdf_filename', json.pdf_filename)
                         fetch('/analyze', {
@@ -156,7 +164,9 @@
                         window.location.reload();
                     });
                   break;
-                case 200:                     
+                case 200:
+                    uploadButton.style.display = "none";
+                    startButton.style.display = "block";
                     loader.style.display = "none";
                     download.style.display = "block";
                     var json = await response.json();
@@ -173,8 +183,6 @@
                     });
             }
         }
-
-        
     </script>
 </body>
 </html>
