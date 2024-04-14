@@ -2,27 +2,192 @@
 <html>
 <head>
     <title>Question Quiz</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../static/styles/tailwind.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/styles/style.css" type="text/css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>               
+        textarea {
+            resize: none;
+        }
+
+        body {
+            --tw-bg-opacity: 1;
+            background-color: rgb(10 10 10 / var(--tw-bg-opacity));
+        }
+
+        textarea {
+            width: 100%;
+            height: 350px;
+            padding: 10px;
+            border-radius: 3px;
+            outline: none;
+            border: none;
+            resize: vertical;
+        }
+
+        .button-holder {
+            padding-top: 1%;
+            margin-left: 1%;
+        }
+        
+        .toolbar-container {
+            background-color: #fff;
+            width: 100%;
+            border-radius: 4px;
+            padding: 5px;
+            box-shadow: #00000059 0px 5px 15px;
+        }
+
+        .text-toolbar {
+            display: inline-block !important;
+            padding: 0 5px;
+        }
+
+        .first {
+            border-right: 2px solid #141a2033;
+        }
+
+        input[type=number] {
+            outline: none;
+            border: none;
+            width: 40px;
+            color: #131c35;
+            font-size: 16px;
+            padding: 8px 0px;
+            margin-left: 5px;
+        }
+
+        .second {
+            border-right: 2px solid #141a2033;
+        }
+
+        button {
+            border: none;
+            color: #131c35;
+            font-size: 16px;
+            font-weight: 300;
+            background: transparent;
+            padding: 8px 13px;
+            border-radius: 3px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        button:hover {
+            background: #d5d5d5;
+        }
+
+        button:focus {
+            background: #bab9b9;
+            color: #111;
+        }
+
+        .third {
+            border-right: 2px solid #141a2033;
+        }
+
+        .third button:focus {
+            background: #bab9b9;
+            color: #111;;
+        }
+
+        input[type=color] {
+            width: 25px;
+            outline: none;
+            border: none;
+            background: none;
+        }
+    </style>
 </head>
-<body>
-    <h1>Question Quiz</h1>
-    <form method="POST">
-        <p>{{ question }}</p>
-        {% if result %}
-            <p>{{ result }}</p>
-        {% endif %}
-        {% if answer %}
-            <p>Full Answer: {{ answer }}</p>
-        {% endif %}
-        {% if not next_question %}
-            {% if question %}
-                <input type="text" name="answer">
-                <input type="submit" formaction="/check_answer" value="Check Answer">
-            {% else %}
-                <p>{{ answer }}</p>
-            {% endif %}
-        {% else %}
-            <input type="submit" formaction="/next_question" value="Next Question">
-        {% endif %}
-    </form>
+<body class="bg-main">
+    <section>
+        <div class="w-screen text-center m-3">
+            <span class="roboto-title-bold title-gradient">Question Answer Generator</span>
+        </div>
+    </section>
+    <section>
+        <div class="container ml-auto mr-auto max-w-7xl">
+            <div class="row-auto">
+                <div class="rounded-md shadow-md items-center p-5 bg-box">
+                    <form method="POST" class="m-3">
+                        <span class="font-semibold block m-3 text-center text-black JetBrains-semibold">{{ question }}</span>
+                        {% if user_answer %}
+                            <div class="toolbar-container">
+                                <div class="first text-toolbar">
+                                    <input type="number" id="font-size" min="1" max="100" value="16" onchange="f1(this)">
+                                </div>
+                                <div class="second text-toolbar">
+                                    <button type="button" onclick="f2(this)">
+                                        <i class="fa-solid fa-bold"></i>
+                                    </button>
+                                    <button type="button" onclick="f3(this)">
+                                        <i class="fa-solid fa-italic"></i>
+                                    </button>
+                                    <button type="button" onclick="f4(this)">
+                                        <i class="fa-solid fa-underline"></i>
+                                    </button>
+                                </div>
+                                <div class="third text-toolbar">
+                                    <button type="button" onclick="f5(this)">
+                                        <i class="fa-solid fa-align-left"></i>
+                                    </button>
+                                    <button type="button" onclick="f6(this)">
+                                        <i class="fa-solid fa-align-center"></i>
+                                    </button>
+                                    <button type="button" onclick="f7(this)">
+                                        <i class="fa-solid fa-align-right"></i>
+                                    </button>
+                                </div>
+                                <div class="fourth text-toolbar">
+                                    <button type="button" onclick="f8(this)">
+                                        aA
+                                    </button>
+                                    <button type="button" onclick="f9(this)">
+                                        <i class="fa-solid fa-text-slash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <br>
+                            <div class="block border-2 border-black rounded-sm">
+                                <textarea id="textarea" name="answer" placeholder="Write down your answer here..." onkeydown="handleTab(event)" onmouseup="getSelectedText()">{{ user_answer }}</textarea>
+                            </div>
+                        {% endif %}
+                        {% if result %}
+                            <p class="text-black roboto-medium">{{ result }}</p>
+                        {% endif %}
+                        {% if answer %}
+                            <p class="text-black roboto-medium">Full Answer: {{ answer }}</p>
+                        {% endif %}
+                        {% if not next_question %}
+                            {% if question %}
+                                <div>
+                                    <div class="block border-2 border-black rounded-sm">
+                                        <textarea id="textarea" name="answer" placeholder="Write down your answer here..." onkeydown="handleTab(event)" onmouseup="getSelectedText()">{{ user_answer }}</textarea>
+                                    </div>
+                                    <div class="button-holder">
+                                        <input type="submit" formaction="/check_answer" value="Check Answer" class="gen-button py-2 px-3 rounded-md roboto-medium cursor-pointer">
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p>{{ answer }}</p>
+                            {% endif %}
+                        {% else %}
+                            <div class="button-holder">
+                                <input type="submit" formaction="/next_question" value="Next Question" class="gen-button py-2 px-3 rounded-md roboto-medium cursor-pointer">
+                            </div>                            
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script src="../static/scripts/scripts.js"></script>
 </body>
 </html>

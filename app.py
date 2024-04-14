@@ -4,7 +4,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.encoders import jsonable_encoder
 from langchain_openai import ChatOpenAI
-from langchain.chains import QAGenerationChain
 from langchain.text_splitter import TokenTextSplitter
 from langchain_community.docstore.document import Document
 from langchain_community.document_loaders import PyPDFLoader
@@ -17,15 +16,16 @@ from langchain.chains import RetrievalQA
 import pandas as pd
 import os 
 import json
-import time
 import uvicorn
 import aiofiles
-from PyPDF2 import PdfReader
 import csv
 import ocrmypdf
 from api_keys.Constants import OPENAI_API
+from api_keys.Constants import OPENAI_API
 
 app = FastAPI()
+
+API_KEY = str(OPENAI_API())
 
 API_KEY = str(OPENAI_API())
 
@@ -35,18 +35,18 @@ templates = Jinja2Templates(directory="templates")
 
 os.environ["OPENAI_API_KEY"] = API_KEY
 
+#Nhận vào đường dẫn đến file pdf gốc và đường dẫn file được xử lý
 def ocr_pdf(file_path, save_path):
     ocrmypdf.ocr(file_path, save_path, skip_text=True)
-    return save_path
+    return save_path #Trả về đường dần file được xử lý
 
 def file_processing(file_path):
-
-    # Load data from PDF
+    #Load file PDF
     loader = PyPDFLoader(file_path)
     data = loader.load()
-
     question_gen = ''
 
+    #Tách văn bản thành các chunks
     for page in data:
         question_gen += page.page_content
         
@@ -66,7 +66,6 @@ def file_processing(file_path):
         chunk_overlap = 100
     )
 
-
     document_answer_gen = splitter_ans_gen.split_documents(
         document_ques_gen
     )
@@ -85,7 +84,7 @@ def llm_pipeline(file_path):
     prompt_template = """
     You are an expert at creating questions based on studying materials and documentation.
     Your goal is to prepare a student for their exam and tests.
-    You do this by creating questions in the form of about the text below:
+    You do this by creating questions about the text below:
 
     ------------
     {text}
@@ -137,9 +136,11 @@ def llm_pipeline(file_path):
     ques_list = ques.split("\n")
     filtered_ques_list = [element for element in ques_list if element.endswith('?') or element.endswith('.')]
 
-    answer_generation_chain = RetrievalQA.from_chain_type(llm=llm_answer_gen, 
-                                                chain_type="stuff", 
-                                                retriever=vector_store.as_retriever())
+    answer_generation_chain = RetrievalQA.from_chain_type(
+                                                            llm=llm_answer_gen, 
+                                                            chain_type="stuff", 
+                                                            retriever=vector_store.as_retriever()
+                                                        )
 
     return answer_generation_chain, filtered_ques_list
 
@@ -151,7 +152,7 @@ def get_csv (file_path):
     output_file = base_folder+"QA.csv"    
     with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
         csv_writer = csv.writer(csvfile)
-        csv_writer.writerow(["Question", "Answer"])  # Writing the header row
+        csv_writer.writerow(["Question", "Answer"])
 
         for question in ques_list:
             print("Question: ", question)
@@ -264,13 +265,11 @@ async def check_answer(request: Request):
 
     result = answer_check(question, user_answer, correct_answer)
 
-    return templates.TemplateResponse("quiz.html", {"request": request, "question": question, "answer": correct_answer, "result": result, "next_question": next_question})
+    return templates.TemplateResponse("quiz.html", {"request": request, "question": question, "user_answer": user_answer, "answer": correct_answer, "result": result, "next_question": next_question})
 
 @app.post("/next_question")
 async def next_question(request: Request):
     global question_index
-
-    # Move to the next question
     question_index += 1
 
     # Check if we have reached the end of the question bank
@@ -283,6 +282,7 @@ async def next_question(request: Request):
         answer = ''
         next_question = False
     return templates.TemplateResponse("quiz.html", {"request": request, "question": question, "answer": answer, "result": '', "next_question": next_question})
+
 if __name__ == "__main__":
     uvicorn.run("app:app", port=8000, reload=True)
     
